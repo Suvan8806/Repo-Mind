@@ -1,0 +1,17 @@
+# Core LangChain Framework
+langchain>=0.3.0
+langchain-core
+langchain-community
+
+# Vector Database & Model Integration
+langchain-chroma
+langchain-ollama
+chromadb
+
+# Git & System Monitoring
+GitPython
+psutil
+
+# UI & Data Handling
+streamlit
+requests
