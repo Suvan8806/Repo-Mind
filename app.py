@@ -36,9 +36,8 @@ with st.sidebar:
     
     st.divider()
     model_choice = st.sidebar.selectbox("Model Engine", [SETTINGS["llm_model"], "phi3"], index=0)
-    k_val = st.sidebar.slider("Vector Search Depth (k)", 1, 15, 10)
+    k_val = st.sidebar.slider("Vector Search Depth (k)", 1, 30, 10)
 
-# --- RAG Logic with Thinking Animation ---
 def get_response(user_input):
     with st.status("🚀 Deep Scanning Repository...", expanded=True) as status:
         start_time = time.time()
@@ -49,18 +48,64 @@ def get_response(user_input):
         
         status.write("📂 Querying ChromaDB Vector Store...")
         vector_db = Chroma(persist_directory=SETTINGS["db_path"], embedding_function=embeddings)
-        retriever = vector_db.as_retriever(search_kwargs={"k": k_val})
-
+        
+        # --- HYBRID RETRIEVAL LOGIC ---
+        # We split the search k-value: half for history, half for source
+        k_split = max(k_val // 2, 1)
+        
+        # 1. Fetch Current Source Code chunks
+        status.write("🔍 Fetching Current Source Code...")
+        src_docs = vector_db.similarity_search(
+            user_input, 
+            k=k_split, 
+            filter={"hash": "LATEST"}
+        )
+        
+        # 2. Fetch Historical Commit chunks
+        status.write("📜 Fetching Historical Git Diffs...")
+        hist_docs = vector_db.similarity_search(
+            user_input, 
+            k=k_split, 
+            filter={"hash": {"$ne": "LATEST"}}
+        )
+        
+        # Combine them manually to ensure the LLM sees both
+        combined_context = src_docs + hist_docs
+        
+        # Define the Forensic Prompt
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a Senior Software Engineer. Explain the fix using the provided Git context.
-            Always highlight 'CODE_CHANGES:' and explain the '+/-' lines clearly.
-            Context: {context}"""),
+            ("system", """You are a Senior Forensic Auditor. 
+            Your context contains two types of data:
+            1. 'Current Source Code': The actual code currently in the files (Metadata: hash=LATEST).
+            2. 'Historical Diffs': The changes made in past commits (+/- lines).
+            
+            TASK:
+            - Scan the context for 'FILE_PATH' to find the CURRENT implementation.
+            - Scan the context for 'COMMIT_ID' to find the HISTORICAL fix.
+            - Compare them. Specifically check if the logic from the Historical Diff is present in the Current Source.
+            - If the 'Current Source Code' is missing the logic from the 'Historical Diff', report a regression.
+            
+            Context:
+            {context}"""),
             ("human", "{input}")
         ])
 
         status.write("🧠 Synthesizing Forensic Analysis...")
-        chain = create_retrieval_chain(retriever, create_stuff_documents_chain(llm, prompt))
-        response = chain.invoke({"input": user_input})
+        # We skip the standard 'retriever' and pass our combined_context directly
+        document_chain = create_stuff_documents_chain(llm, prompt)
+        
+        # Since we aren't using create_retrieval_chain (which handles retrieval for us),
+        # we invoke the document chain directly with our manually gathered context.
+        response_text = document_chain.invoke({
+            "input": user_input,
+            "context": combined_context
+        })
+        
+        # Wrap in a dictionary to keep consistency with your UI code
+        response = {
+            "answer": response_text,
+            "context": combined_context
+        }
         
         end_time = time.time()
         status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
@@ -103,6 +148,11 @@ if prompt := st.chat_input("Analyze the Proxy-Authorization fix..."):
         # --- Source Evidence ---
         with st.expander("🛠️ View Historical Source Diffs"):
             for i, doc in enumerate(res["context"]):
-                st.markdown(f"**Source {i+1}:** `{doc.metadata.get('hash', 'N/A')}`")
-                st.code(doc.page_content[:600], language="diff")
+                # Identify the type of document
+                is_source = doc.metadata.get("hash") == "LATEST"
+                icon = "📄 [CURRENT SOURCE]" if is_source else "📜 [GIT HISTORY]"
+                color = "blue" if is_source else "green"
+                
+                st.markdown(f"**Source {i+1}: {icon}**")
+                st.code(doc.page_content[:800], language="diff" if not is_source else "python")
                 st.divider()

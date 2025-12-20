@@ -1,4 +1,5 @@
 import git
+import os
 from langchain_core.documents import Document
 
 def get_git_history(repo_path, max_commits=200):
@@ -35,3 +36,29 @@ def get_git_history(repo_path, max_commits=200):
             if len(docs) >= max_commits:
                 break
     return docs
+
+def get_current_source_tree(repo_path):
+    """Recursively pulls the latest version of all Python files."""
+    source_docs = []
+    # Extension whitelist to avoid ingesting binaries or junk
+    valid_exts = {'.py', '.md', '.txt', '.yaml'}
+    
+    for root, dirs, files in os.walk(repo_path):
+        # Skip hidden folders like .git
+        if '.git' in root: continue
+        
+        for file in files:
+            if any(file.endswith(ext) for ext in valid_exts):
+                full_path = os.path.join(root, file)
+                try:
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        code = f.read()
+                        # We label it as SOURCE_FILE so the AI knows this is current state
+                        content = f"FILE: {file}\nPATH: {full_path}\nTYPE: Current Source Code\nCONTENT:\n{code}"
+                        source_docs.append(Document(
+                            page_content=content, 
+                            metadata={"hash": "CURRENT", "file": file}
+                        ))
+                except Exception as e:
+                    print(f"Skipping {file}: {e}")
+    return source_docs
