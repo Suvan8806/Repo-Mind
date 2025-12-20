@@ -1,17 +1,17 @@
-# Core LangChain Framework
-langchain>=0.3.0
-langchain-core
-langchain-community
+# --- Core RAG & AI ---
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-ollama==0.2.0
+chromadb==0.5.5
 
-# Vector Database & Model Integration
-langchain-chroma
-langchain-ollama
-chromadb
+# --- Git & System Tools ---
+GitPython==3.1.43
+psutil==6.0.0
+python-dotenv==1.0.1
 
-# Git & System Monitoring
-GitPython
-psutil
+# --- UI & Frontend ---
+streamlit==1.38.0
+watchdog==4.0.1
 
-# UI & Data Handling
-streamlit
-requests
+# --- Data Processing ---
+tiktoken==0.7.0

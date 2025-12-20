@@ -36,7 +36,7 @@ with st.sidebar:
     
     st.divider()
     model_choice = st.sidebar.selectbox("Model Engine", [SETTINGS["llm_model"], "phi3"], index=0)
-    k_val = st.sidebar.slider("Vector Search Depth (k)", 1, 30, 10)
+    k_val = st.sidebar.slider("Vector Search Depth (k)", 1, 30, 20)
 
 def get_response(user_input):
     with st.status("🚀 Deep Scanning Repository...", expanded=True) as status:

@@ -1,0 +1,133 @@
+Markdown
+
+# 🧠 Repo-Mind: Local RAG Forensic Tool
+
+**Repo-Mind** is a high-performance, local-first AI auditor designed for deep-dive forensic analysis of software repositories. Unlike standard AI assistants that only see the current state of code, Repo-Mind cross-references **Historical Git Intent** with **Active Source Code** to identify security regressions and architectural drift.
+
+---
+
+## 🚀 Key Features
+* **Forensic Auditing:** Automatically compare historical bug fixes (Git Diffs) against current implementations to ensure critical patches haven't been reverted.
+* **Hybrid Retrieval Engine:** A custom "Dual-Stream" RAG pipeline that balances historical commits and live source files using metadata-aware filtering (`hash: LATEST`).
+* **Local & Private:** Powered by **Ollama**, ensuring your proprietary code and Git history never leave your local hardware.
+* **High-Performance Telemetry:** Real-time monitoring of token throughput (30+ tok/s), latency, and system resource utilization.
+
+---
+
+## 📊 Performance Benchmarks
+*Tested on: NVIDIA RTX 3050 (6GB VRAM) | Model: Qwen-2.5-Coder-7B*
+
+| Metric | Result |
+| :--- | :--- |
+| **Inference Speed** | **~31.5 tokens/sec** |
+| **Search Depth** | **k=20 (Hybrid Context Split)** |
+| **Vector Store** | **ChromaDB (Persistent)** |
+| **Embedding Model** | **nomic-embed-text** |
+
+---
+
+## 📂 Project Structure
+To ensure the paths in the scripts work correctly, your directory should be organized as follows:
+
+```text
+repo-mind/
+├── data/
+│   └── repos/
+│       └── requests/       # Clone the target repo to analyze here
+├── db/                     # Created automatically by ChromaDB
+├── app.py                  # The Streamlit Forensic UI & RAG Logic
+├── ingest_git.py           # Dual-stream (History + Source) Ingestor
+├── requirements.txt        # Project dependencies
+└── README.md               # Documentation
+
+🛠️ Step-by-Step Setup Guide
+
+Follow these steps exactly to replicate the environment on any new system.
+1. Prerequisites
+
+    Python 3.10 or higher
+
+    Ollama installed (Download here)
+
+    NVIDIA GPU (Highly recommended for 30+ tok/s performance)
+
+2. Environment Configuration
+
+Open your terminal (PowerShell or Bash) and run:
+Bash
+
+# 1. Clone this repository
+git clone <your-repo-url>
+cd repo-mind
+
+# 2. Create a Virtual Environment
+python -m venv venv
+
+# 3. Activate the Virtual Environment
+# On Windows:
+.\venv\Scripts\activate
+# On Mac/Linux:
+source venv/bin/activate
+
+# 4. Install all dependencies
+pip install -r requirements.txt
+
+3. Prepare the Local AI Models
+
+Repo-Mind requires the LLM and the Embedding model to be available locally:
+Bash
+
+# Pull the LLM (The Analyst)
+ollama pull qwen2.5-coder:7b
+
+# Pull the Embedding Model (The Librarian)
+ollama pull nomic-embed-text
+
+4. Prepare the Forensic Target
+
+Place the repository you want to audit into the data/repos/ directory:
+Bash
+
+mkdir -p data/repos
+cd data/repos
+
+# Example: Auditing the 'Requests' library
+git clone [https://github.com/psf/requests.git](https://github.com/psf/requests.git)
+cd ../..
+
+5. Ingestion & Execution
+Bash
+
+# Step A: Run the Dual-Stream Ingestor
+# This vectorizes Git history AND current source code
+python ingest_git.py
+
+# Step B: Launch the Forensic UI
+streamlit run app.py
+
+🔍 How It Works: Forensic Hybrid RAG
+
+Repo-Mind solves the "Vector Crowding" problem. In large repositories, thousands of historical commits often "drown out" the current source code in a standard vector search.
+
+The Hybrid Solution: The system performs two parallel searches for every query:
+
+    Stream A (Source): Filters specifically for hash: LATEST to grab current file implementations.
+
+    Stream B (History): Filters for historical commits to understand the "Why" behind the code changes.
+
+The AI then acts as a Senior Forensic Auditor, comparing the two streams to verify if a past security fix is still active or if a regression has occurred.
+🔮 Future Plans
+
+    Multi-Repo Knowledge: Cross-reference vulnerabilities across different projects simultaneously.
+
+    Automated PR Auditing: A CI/CD integration that flags potential regressions before code is merged.
+
+    Graph-Based RAG: Implement Knowledge Graphs to map dependencies between developers and functions over time.
+
+    Cross-Language Support: Expand forensic parsing to Go, Rust, and JavaScript.
+
+🤝 Technical Challenges Overcome
+
+    Retrieval Imbalance: Implemented a custom hybrid retriever to prevent 300+ git commits from hiding the actual source code implementation.
+
+    Hardware Optimization: Tuned the RAG chain for consumer-grade GPUs (RTX 3050) to maintain high-speed token generation and stable VRAM usage.
