@@ -68,8 +68,8 @@ text
 
 ## 2. Clone and Setup the Project
 
-- git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
 ```bash
+git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
 cd repo-mind
 ```
 
