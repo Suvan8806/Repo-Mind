@@ -44,6 +44,7 @@ Provide reasoned explanations with source references.
 ---
 
 ## 📂 Project Structure
+'''
 repo-mind/
 ├── data/
 │   └── repos/
@@ -54,7 +55,7 @@ repo-mind/
 ├── requirements.txt        # Project dependencies
 └── README.md               # This documentation
 text
-
+'''
 
 ---
 
@@ -68,7 +69,9 @@ text
 ## 2. Clone and Setup the Project
 
 - git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
-- cd repo-mind
+'''bash
+cd repo-mind
+'''
 
 Create and activate virtual environment
 - python -m venv venv
