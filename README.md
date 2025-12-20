@@ -60,7 +60,7 @@ text
 
 ## 🛠️ Step-by-Step Setup Guide
 
-### 1. Prerequisites
+# 1. Prerequisites
 - Python 3.10 or higher
 - [Ollama](https://ollama.com) installed and running
 - NVIDIA GPU recommended for optimal performance (30+ tokens/sec)
