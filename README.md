@@ -97,7 +97,7 @@ Embedding model for vector search
 ## 4. Prepare the Target Repository
 Clone the repository you want to audit into the data/repos/ directory:
 
-- 'mkdir -p data/repos'
+- ' mkdir -p data/repos '
 - cd data/repos
 
 Example: Auditing the 'requests' library
