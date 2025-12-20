@@ -14,6 +14,22 @@
 
 ---
 
+## 🔍 How It Works: Hybrid Forensic RAG
+Standard RAG on large repos suffers from vector crowding — thousands of historical commits can overshadow current source code in similarity searches.
+
+### Repo-Mind's Dual-Stream Solution:
+
+Stream A (Current Source): Queries filtered to hash: LATEST for up-to-date file implementations.
+Stream B (Historical Context): Retrieves relevant commits and diffs to reveal intent, fixes, and "why" behind changes.
+
+The LLM (Qwen2.5-Coder) acts as a Senior Forensic Auditor, cross-referencing both streams to:
+
+Verify if past security fixes remain intact.
+Detect architectural drift or unintended reversions.
+Provide reasoned explanations with source references.
+
+---
+
 ## 📊 Performance Benchmarks
 
 *Tested on: NVIDIA RTX 3050 (6GB VRAM) | Model: Qwen2.5-Coder-7B*
@@ -38,3 +54,59 @@ repo-mind/
 ├── requirements.txt        # Project dependencies
 └── README.md               # This documentation
 text
+
+
+---
+
+## 🛠️ Step-by-Step Setup Guide
+
+### 1. Prerequisites
+- Python 3.10 or higher
+- [Ollama](https://ollama.com) installed and running
+- NVIDIA GPU recommended for optimal performance (30+ tokens/sec)
+
+### 2. Clone and Setup the Project
+
+git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
+cd repo-mind
+
+# Create and activate virtual environment
+python -m venv venv
+
+# On Windows:
+.\venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+
+### 3. Pull Local AI Models
+Repo-Mind uses local models via Ollama for privacy and speed:
+
+# LLM for code analysis and reasoning
+ollama pull qwen2.5-coder:7b
+
+# Embedding model for vector search
+ollama pull nomic-embed-text
+
+### 4. Prepare the Target Repository
+Clone the repository you want to audit into the data/repos/ directory:
+
+mkdir -p data/repos
+cd data/repos
+
+# Example: Auditing the 'requests' library
+git clone https://github.com/psf/requests.git
+cd ../..
+
+### 5. Ingest Data and Launch
+# Step A: Run the dual-stream ingestor
+# This processes Git history (commits/diffs) and current source code into the vector database
+python ingest_git.py
+
+# Step B: Launch the Streamlit UI
+streamlit run app.py
+
+Open your browser to the provided local URL (usually http://localhost:8501) to start forensic queries.
