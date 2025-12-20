@@ -67,48 +67,52 @@ text
 
 ## 2. Clone and Setup the Project
 
-git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
-cd repo-mind
+- git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
+- cd repo-mind
 
 Create and activate virtual environment
-python -m venv venv
+- python -m venv venv
 
 On Windows:
-.\venv\Scripts\activate
+- .\venv\Scripts\activate
 
 On macOS/Linux:
-source venv/bin/activate
+- source venv/bin/activate
 
 Install dependencies
-pip install -r requirements.txt
+- pip install -r requirements.txt
 
 
 ## 3. Pull Local AI Models
 Repo-Mind uses local models via Ollama for privacy and speed:
 
 LLM for code analysis and reasoning
-ollama pull qwen2.5-coder:7b
+'''
+- ollama pull qwen2.5-coder:7b
+'''
 
 Embedding model for vector search
-ollama pull nomic-embed-text
+- ollama pull nomic-embed-text
 
 ## 4. Prepare the Target Repository
 Clone the repository you want to audit into the data/repos/ directory:
 
-mkdir -p data/repos
-cd data/repos
+- mkdir -p data/repos
+- cd data/repos
 
 Example: Auditing the 'requests' library
-git clone https://github.com/psf/requests.git
-cd ../..
+- git clone https://github.com/psf/requests.git
+- cd ../..
 
 ## 5. Ingest Data and Launch
 
 Step A: Run the dual-stream ingestor
+
 This processes Git history (commits/diffs) and current source code into the vector database
-python ingest_git.py
+- python ingest_git.py
 
 Step B: Launch the Streamlit UI
-streamlit run app.py
+
+- streamlit run app.py
 
 Open your browser to the provided local URL (usually http://localhost:8501) to start forensic queries.
