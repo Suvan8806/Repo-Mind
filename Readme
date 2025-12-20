@@ -1,6 +1,6 @@
 Markdown
 
-# 🧠 Repo-Mind: Local RAG Forensic Tool
+#🧠 Repo-Mind: Local RAG Forensic Tool
 
 **Repo-Mind** is a high-performance, local-first AI auditor designed for deep-dive forensic analysis of software repositories. Unlike standard AI assistants that only see the current state of code, Repo-Mind cross-references **Historical Git Intent** with **Active Source Code** to identify security regressions and architectural drift.
 
