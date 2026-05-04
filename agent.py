@@ -8,8 +8,9 @@ from config import SETTINGS
 
 def start_chat():
     # 1. Initialize models
-    llm = OllamaLLM(model=SETTINGS["llm_model"])
-    embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"])
+    _b = SETTINGS["ollama_base_url"]
+    llm = OllamaLLM(model=SETTINGS["llm_model"], base_url=_b)
+    embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"], base_url=_b)
 
     # 2. Load the Memory
     vector_db = Chroma(

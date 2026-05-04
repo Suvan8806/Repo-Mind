@@ -1,0 +1,21 @@
+# Usage:
+#   1. Install Ollama on the host: https://ollama.com — pull models (e.g. ollama pull qwen2.5-coder:1.5b)
+#   2. From this directory: docker compose up --build
+#   3. Open http://localhost:8501
+#
+# Ingest (interactive): docker compose run --rm -it repo-mind python ingest_git.py
+#
+# Ollama stays on the host so GPU/RAM work as usual. The app container talks to it via host.docker.internal.
+
+services:
+  repo-mind:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./local_memory:/app/local_memory
+      - ./data:/app/data

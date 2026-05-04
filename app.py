@@ -79,8 +79,9 @@ def get_response(user_input):
         start_time = time.time()
         
         status.write("🔍 Initializing Local LLM & Embeddings...")
-        llm = OllamaLLM(model=model_choice)
-        embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"])
+        _ollama = SETTINGS["ollama_base_url"]
+        llm = OllamaLLM(model=model_choice, base_url=_ollama)
+        embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"], base_url=_ollama)
         
         status.write("📂 Querying ChromaDB Vector Store...")
         vector_db = Chroma(persist_directory=persist_path, embedding_function=embeddings)

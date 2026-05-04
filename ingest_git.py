@@ -142,7 +142,8 @@ def build_git_db():
     print(f"✂️ Split {len(raw_docs)} commits into {len(docs)} chunks.")
 
     # 3. Setup Embeddings
-    embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"])
+    _ollama = SETTINGS["ollama_base_url"]
+    embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"], base_url=_ollama)
     
     # 4. Wipe only this index (do not delete other ingested repos)
     if os.path.exists(persist_dir):
