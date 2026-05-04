@@ -6,6 +6,8 @@ All inference runs on your machine via **Ollama**; vectors live in **ChromaDB** 
 
 ---
 
+<img width="1895" height="882" alt="image" src="https://github.com/user-attachments/assets/78c75e39-5a61-425b-9235-77c273229c2a" />
+
 ## Features
 
 - **Hybrid retrieval**: Similarity search splits **current source** (`hash == LATEST`) and **historical commits** (`hash != LATEST`) so both appear in context.
