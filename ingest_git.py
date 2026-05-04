@@ -1,6 +1,6 @@
 import os
 import shutil
-from core.extractor import get_current_source_tree, get_git_history
+import git
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from config import SETTINGS
@@ -31,10 +31,62 @@ def get_current_source_tree(repo_path):
                     ))
     return source_docs
 
+
+def _safe_index_id(repo_abs: str) -> str:
+    base = os.path.basename(os.path.normpath(repo_abs))
+    if not base or base in (".", ".."):
+        base = "repo"
+    return "".join(c if (c.isalnum() or c in "-_") else "_" for c in base)
+
+
+def _resolve_repo_input(raw: str) -> str | None:
+    raw = raw.strip().strip('"').strip("'")
+    if not raw:
+        return None
+    cwd = os.getcwd()
+    if os.path.isabs(raw):
+        cand = os.path.normpath(raw)
+        return cand if os.path.isdir(cand) else None
+    if "/" in raw or "\\" in raw:
+        cand = os.path.normpath(os.path.join(cwd, raw))
+        return cand if os.path.isdir(cand) else None
+    cand = os.path.normpath(os.path.join(cwd, "data", "repos", raw))
+    if os.path.isdir(cand):
+        return cand
+    cand = os.path.normpath(os.path.join(cwd, raw))
+    return cand if os.path.isdir(cand) else None
+
+
+def iter_all_git_history_docs(repo_path: str):
+    """Every commit on all branches with a patch diff — no keyword filter."""
+    repo = git.Repo(repo_path)
+    for commit in repo.iter_commits("--all"):
+        try:
+            diff = repo.git.show(commit.hexsha, patch=True, unified=3)
+            if "diff --git" not in diff and "diff --cc" not in diff:
+                continue
+            diff_text = str(diff)[:50000]
+            content = f"COMMIT_ID: {commit.hexsha[:7]}\n"
+            content += f"AUTHOR: {commit.author}\n"
+            content += f"SUMMARY: {commit.message.strip()}\n"
+            content += f"CODE_CHANGES:\n{diff_text}"
+            metadata = {"hash": commit.hexsha[:7], "author": str(commit.author)}
+            yield Document(page_content=content, metadata=metadata)
+        except Exception as e:
+            print(f"⚠️ Skip commit {commit.hexsha[:7]}: {e}")
+
+
 def build_git_db():
 
     print("🚀 Starting Git History Ingestion...")
-    repo_path = os.path.join("data", "repos", "LIDA")
+    raw = input(
+        "Repository to ingest (name under data/repos, e.g. LIDA, or a full path): "
+    ).strip()
+    repo_path = _resolve_repo_input(raw)
+    if not repo_path:
+        print(f"❌ Could not resolve repository path from: {raw!r}")
+        return
+
     git_dir = os.path.join(repo_path, ".git")
     if not os.path.isdir(git_dir):
         abs_path = os.path.abspath(repo_path)
@@ -44,8 +96,14 @@ def build_git_db():
             print(f"   (Folder exists but is not a repo: remove it or init/clone inside it.)")
         return
 
-    # 1. Get History (The "Why")
-    history_docs = get_git_history(repo_path, max_commits=1000)
+    persist_dir = os.path.normpath(
+        os.path.join(SETTINGS["db_path"], _safe_index_id(repo_path))
+    )
+
+    print(f"📌 Index id: {_safe_index_id(repo_path)} → vectors: {persist_dir}")
+
+    # 1. Get History (The "Why") — all commits on all branches
+    history_docs = list(iter_all_git_history_docs(repo_path))
     
     # 2. Get Source Tree (The "What")
     # Make sure this function is defined above!
@@ -86,10 +144,10 @@ def build_git_db():
     # 3. Setup Embeddings
     embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"])
     
-    # 4. Wipe old memory
-    if os.path.exists(SETTINGS["db_path"]):
-        print(f"🧹 Clearing existing database at {SETTINGS['db_path']}...")
-        shutil.rmtree(SETTINGS["db_path"])
+    # 4. Wipe only this index (do not delete other ingested repos)
+    if os.path.exists(persist_dir):
+        print(f"🧹 Clearing existing database at {persist_dir}...")
+        shutil.rmtree(persist_dir)
         
     # 5. Build Vector Store in Batches
     # This is critical for RTX 3050 stability to prevent OOM/Timeout errors
@@ -100,7 +158,7 @@ def build_git_db():
     vector_db = Chroma.from_documents(
         documents=docs[:batch_size],
         embedding=embeddings,
-        persist_directory=SETTINGS["db_path"]
+        persist_directory=persist_dir
     )
     
     # Add remaining batches

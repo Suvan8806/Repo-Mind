@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import psutil
 import time
@@ -6,6 +7,18 @@ from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from config import SETTINGS
 from langchain.chains.combine_documents import create_stuff_documents_chain
+
+
+def _ingestion_index_names():
+    root = SETTINGS["db_path"]
+    if not os.path.isdir(root):
+        return []
+    return sorted(
+        name
+        for name in os.listdir(root)
+        if os.path.isdir(os.path.join(root, name)) and not name.startswith(".")
+    )
+
 
 st.set_page_config(page_title="Repo-Mind | Forensic AI", layout="wide", initial_sidebar_state="expanded")
 
@@ -34,6 +47,25 @@ with st.sidebar:
     st.caption(f"Used: {ram_stats.used / (1024**3):.1f}GB / Total: {ram_stats.total / (1024**3):.1f}GB")
     
     st.divider()
+    _names = _ingestion_index_names()
+    if _names:
+        index_choice = st.selectbox(
+            "Ingestion to use (Chroma index)",
+            _names,
+            help=f"Each ingest writes under `{SETTINGS['db_path']}/<repo_name>/`.",
+        )
+        persist_path = os.path.normpath(os.path.join(SETTINGS["db_path"], index_choice))
+    else:
+        st.warning(
+            f"No subfolders in `{SETTINGS['db_path']}` — run ingest once; "
+            "or use a legacy flat DB at that path."
+        )
+        index_choice = "(flat)"
+        persist_path = os.path.normpath(SETTINGS["db_path"])
+
+    st.caption(f"Store: `{persist_path}`")
+
+    st.divider()
     model_choice = st.sidebar.selectbox(
         "Model Engine (Ollama)",
         [SETTINGS["llm_model"], "qwen2.5-coder:7b", "phi3:mini", "llama3.2:1b"],
@@ -51,7 +83,7 @@ def get_response(user_input):
         embeddings = OllamaEmbeddings(model=SETTINGS["embed_model"])
         
         status.write("📂 Querying ChromaDB Vector Store...")
-        vector_db = Chroma(persist_directory=SETTINGS["db_path"], embedding_function=embeddings)
+        vector_db = Chroma(persist_directory=persist_path, embedding_function=embeddings)
         
         # --- HYBRID RETRIEVAL LOGIC ---
         # We split the search k-value: half for history, half for source
