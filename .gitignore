@@ -2,11 +2,26 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+.Python
 .env
+.env.*
 
 # Each user clones target repos here (do not commit vendored code)
 data/repos/*
 !data/repos/.gitkeep
 
-# Chroma persistent index (regenerate with ingest_git.py)
+# Optional local registry (machine-specific paths)
+data/index_registry.json
+
+# Chroma persistent indexes (regenerate with ingest_git.py)
 local_memory/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.cursor/
+
+# Streamlit secrets (never commit)
+.streamlit/secrets.toml

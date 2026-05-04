@@ -1,138 +1,178 @@
-# 🧠 Repo-Mind: Local RAG Forensic Tool
+# Repo-Mind: Local RAG Forensic Tool
 
-**Repo-Mind** is a high-performance, local-first AI auditor designed for deep-dive forensic analysis of software repositories. Unlike standard AI assistants that only see the current state of code, Repo-Mind cross-references **historical Git intent** (from commits and diffs) with **active source code** to identify security regressions, architectural drift, and reverted fixes.
+**Repo-Mind** is a local-first AI assistant for repository analysis. It cross-references **Git history** (commit diffs and intent) with **current source code** so you can ask forensic-style questions: regressions, how a fix evolved, and whether past changes still appear in the tree.
 
----
-
-## 🚀 Key Features
-
-- **Forensic Auditing**: Automatically compares historical bug fixes and security patches (via Git diffs) against current implementations to detect regressions.
-- **Hybrid Retrieval Engine**: A custom "Dual-Stream" RAG pipeline that balances historical commits and live source files using metadata-aware filtering (e.g., `hash: LATEST` for current code).
-- **Local & Private**: Fully powered by **Ollama** — your proprietary code and Git history never leave your machine.
-- **High-Performance Telemetry**: Real-time monitoring of token throughput, latency, and resource utilization.
-- **Streamlit UI**: Interactive forensic interface for querying and visualizing results.
+All inference runs on your machine via **Ollama**; vectors live in **ChromaDB** under `local_memory/`.
 
 ---
 
-## 🔍 How It Works: Hybrid Forensic RAG
-Standard RAG on large repos suffers from vector crowding — thousands of historical commits can overshadow current source code in similarity searches.
+## Features
 
-### Repo-Mind's Dual-Stream Solution:
-
-Stream A (Current Source): Queries filtered to hash: LATEST for up-to-date file implementations.
-Stream B (Historical Context): Retrieves relevant commits and diffs to reveal intent, fixes, and "why" behind changes.
-
-The LLM (Qwen2.5-Coder) acts as a Senior Forensic Auditor, cross-referencing both streams to:
-
-Verify if past security fixes remain intact.
-Detect architectural drift or unintended reversions.
-Provide reasoned explanations with source references.
+- **Hybrid retrieval**: Similarity search splits **current source** (`hash == LATEST`) and **historical commits** (`hash != LATEST`) so both appear in context.
+- **Full-history ingest**: Walks **`git log --all`** and indexes commits that include a patch (`diff --git` / `diff --cc`) — no keyword filter on commit messages.
+- **Interactive ingest**: Prompts for which repo to index (name under `data/repos/` or a full path).
+- **Per-repo indexes**: Each ingest writes vectors to `local_memory/<repo_basename>/` so multiple repos do not overwrite each other.
+- **Streamlit UI**: Sidebar **ingestion** dropdown to choose which index to query; model choice, `k`, latency and chunk metrics.
+- **Docker**: One-command run with `docker compose`; Ollama stays on the host (GPU/RAM friendly).
 
 ---
 
-## 📊 Performance Benchmarks
+## How it works
 
-*Tested on: NVIDIA RTX 3050 (6GB VRAM) | Model: Qwen2.5-Coder-7B*
+1. **Ingest** embeds chunked commit diffs plus the current `.py` tree into Chroma.
+2. **Query** embeds your question with the same Ollama embedding model, retrieves top‑`k` chunks from both streams, and sends them to the LLM with a forensic-style system prompt.
 
-| Metric              | Result                          |
-|---------------------|---------------------------------|
-| **Inference Speed** | ~31.5 tokens/sec                |
-| **Search Depth**    | k=20 (Hybrid Context Split)     |
-| **Vector Store**    | ChromaDB (Persistent)           |
-| **Embedding Model** | nomic-embed-text                |
+Default models (override in `config.py`):
 
----
-
-## 📂 Project Structure
-```
-repo-mind/
-├── data/
-│   └── repos/
-│       └── <target-repo>/  # Clone the repository to analyze here (e.g., requests)
-├── db/                     # Automatically created by ChromaDB for persistent storage
-├── app.py                  # Streamlit Forensic UI & core RAG logic
-├── ingest_git.py           # Dual-stream ingestor (Git history + current source code)
-├── requirements.txt        # Project dependencies
-└── README.md               # This documentation
-text
-```
+| Role | Default (`config.py`) |
+|------|------------------------|
+| Embeddings | `snowflake-arctic-embed` |
+| LLM | `qwen2.5-coder:1.5b` |
 
 ---
 
-## 🛠️ Step-by-Step Setup Guide
+## Prerequisites
 
-## 1. Prerequisites
-- Python 3.10 or higher
-- [Ollama](https://ollama.com) installed and running
-- NVIDIA GPU recommended for optimal performance (30+ tokens/sec)
+- **Git**
+- **[Ollama](https://ollama.com)** installed and running on the host
+- **Docker Desktop** (or Docker Engine + Compose) — only if you use the container workflow
+- Optional: **Python 3.11+** for running without Docker
 
-## 2. Clone and Setup the Project
+Pull the models you use (at minimum the defaults above):
 
 ```bash
-git clone https://github.com/your-username/repo-mind.git  # Replace with your actual repo URL
-cd repo-mind
+ollama pull snowflake-arctic-embed
+ollama pull qwen2.5-coder:1.5b
 ```
 
-Create and activate virtual environment
+Pull any extra tags you select in the Streamlit UI (e.g. `qwen2.5-coder:7b`).
+
+---
+
+## Clone
+
 ```bash
-python -m venv venv
+git clone https://github.com/Suvan8806/Repo-Mind.git
+cd Repo-Mind
 ```
 
-On Windows:
+Use the folder that contains `docker-compose.yml`, `Dockerfile`, and `app.py`.
+
+---
+
+## Run with Docker (recommended)
+
+From the project root:
+
 ```bash
-.\venv\Scripts\activate
+docker compose up --build
 ```
 
-On macOS/Linux:
+Open **http://localhost:8501**
+
+The container uses **`OLLAMA_BASE_URL=http://host.docker.internal:11434`** so it talks to Ollama on your machine. **Linux**: `extra_hosts` in `docker-compose.yml` maps `host.docker.internal` to the host gateway.
+
+**Ingest** (interactive; use a **second** terminal while the app keeps running):
+
 ```bash
-source venv/bin/activate
+docker compose run --rm -it repo-mind python ingest_git.py
 ```
 
-Install dependencies
+`-it` is required for the repo path prompt.
+
+**Stop** the app: `Ctrl+C` in the first terminal, or `docker compose down`.
+
+---
+
+## Run without Docker
+
+```bash
+python -m venv .venv
+```
+
+Windows: `.\.venv\Scripts\activate`  
+macOS/Linux: `source .venv/bin/activate`
+
 ```bash
 pip install -r requirements.txt
+streamlit run app.py
 ```
 
-## 3. Pull Local AI Models
-Repo-Mind uses local models via Ollama for privacy and speed:
+Ingest:
 
-LLM for code analysis and reasoning
-```bash
-ollama pull qwen2.5-coder:7b
-```
-
-Embedding model for vector search
-```bash
-ollama pull nomic-embed-text
-```
-
-## 4. Prepare the Target Repository
-Clone the repository you want to audit into the data/repos/ directory:
-
-```bash
-mkdir -p data/repos
-cd data/repos
-```
-
-Example: Auditing the 'requests' library
-```bash
-git clone https://github.com/psf/requests.git
-cd ../..
-```
-
-## 5. Ingest Data and Launch
-
-Step A: Run the dual-stream ingestor
-
-This processes Git history (commits/diffs) and current source code into the vector database
 ```bash
 python ingest_git.py
 ```
 
-Step B: Launch the Streamlit UI
+---
 
-```bash
-streamlit run app.py
+## Prepare a repository to index
+
+Clone (or copy) a **git** repo under `data/repos/` so layout is:
+
+```text
+data/repos/<YourRepo>/.git/...
 ```
 
-Open your browser to the provided local URL (usually http://localhost:8501) to start forensic queries.
+Example:
+
+```bash
+mkdir -p data/repos
+cd data/repos
+git clone https://github.com/org/project.git YourRepo
+cd ../..
+```
+
+Run ingest and enter **`YourRepo`** when asked (or paste an absolute path). Vectors are written to **`local_memory/YourRepo/`**.
+
+In the Streamlit sidebar, choose **Ingestion to use (Chroma index)** — each subdirectory of `local_memory/` is one index.
+
+---
+
+## Configuration
+
+Edit **`config.py`**:
+
+| Key | Purpose |
+|-----|---------|
+| `db_path` | Parent folder for Chroma stores (default `local_memory`). Indexes are `db_path/<repo_name>/`. |
+| `embed_model` | Ollama embedding model (must match what you used at ingest). |
+| `llm_model` | Default LLM tag in the UI. |
+| `ollama_base_url` | Set via **`OLLAMA_BASE_URL`** or **`OLLAMA_HOST`** env (default `http://127.0.0.1:11434`). Docker sets this to reach the host. |
+
+---
+
+## Project layout
+
+```text
+Repo-Mind/
+├── app.py              # Streamlit UI + hybrid RAG
+├── ingest_git.py       # Interactive ingest; Git history + current source
+├── config.py           # Models, db_path, Ollama base URL
+├── agent.py            # Optional CLI-style RAG helper
+├── core/
+│   └── extractor.py    # Legacy keyword-filtered history (unused by main ingest path)
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── data/
+│   └── repos/          # Clone targets (gitignored contents; keep .gitkeep)
+└── local_memory/       # Chroma per-repo dirs (gitignored)
+```
+
+---
+
+## Troubleshooting
+
+| Issue | What to try |
+|-------|-------------|
+| Empty ingestion dropdown | Run ingest once; ensure `local_memory/<name>/` exists. |
+| Bad retrieval | Same embedding model at ingest and query; re-ingest after changing `embed_model`. |
+| Docker cannot reach Ollama | Ollama running on host; port **11434**; check `OLLAMA_BASE_URL`. |
+| Ingest prompt does nothing | Use **`-it`** with `docker compose run`. |
+
+---
+
+## License
+
+Add your license here if applicable.
