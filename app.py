@@ -5,8 +5,7 @@ from langchain_ollama import OllamaLLM, OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from config import SETTINGS
-from langchain_classic.chains import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 
 st.set_page_config(page_title="Repo-Mind | Forensic AI", layout="wide", initial_sidebar_state="expanded")
 
@@ -35,7 +34,12 @@ with st.sidebar:
     st.caption(f"Used: {ram_stats.used / (1024**3):.1f}GB / Total: {ram_stats.total / (1024**3):.1f}GB")
     
     st.divider()
-    model_choice = st.sidebar.selectbox("Model Engine", [SETTINGS["llm_model"], "phi3"], index=0)
+    model_choice = st.sidebar.selectbox(
+        "Model Engine (Ollama)",
+        [SETTINGS["llm_model"], "qwen2.5-coder:7b", "phi3:mini", "llama3.2:1b"],
+        index=0,
+        help="Pick a model you have pulled (`ollama pull …`). Smaller tags use less RAM.",
+    )
     k_val = st.sidebar.slider("Vector Search Depth (k)", 1, 30, 20)
 
 def get_response(user_input):

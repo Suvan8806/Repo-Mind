@@ -3,3 +3,10 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Each user clones target repos here (do not commit vendored code)
+data/repos/*
+!data/repos/.gitkeep
+
+# Chroma persistent index (regenerate with ingest_git.py)
+local_memory/

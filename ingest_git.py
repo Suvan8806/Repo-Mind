@@ -34,8 +34,16 @@ def get_current_source_tree(repo_path):
 def build_git_db():
 
     print("🚀 Starting Git History Ingestion...")
-    repo_path = os.path.join("data", "repos", "requests")
-    
+    repo_path = os.path.join("data", "repos", "LIDA")
+    git_dir = os.path.join(repo_path, ".git")
+    if not os.path.isdir(git_dir):
+        abs_path = os.path.abspath(repo_path)
+        print("❌ Not a Git clone (missing .git). Clone the repo first, e.g.:")
+        print(f'   git clone https://github.com/psf/requests.git "{abs_path}"')
+        if os.path.isdir(repo_path):
+            print(f"   (Folder exists but is not a repo: remove it or init/clone inside it.)")
+        return
+
     # 1. Get History (The "Why")
     history_docs = get_git_history(repo_path, max_commits=1000)
     
